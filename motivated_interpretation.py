@@ -46,11 +46,13 @@ def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
                 grouped_scores[pair_id] = []
             grouped_scores[pair_id].append(score)
         total_delta = 0
+        number_of_pairs = 0
         for pair_id, pair_scores in grouped_scores.items():
             if len(pair_scores) != 2:
                 continue
-            total_delta += int(pair_scores[0].score.value) - int(pair_scores[1].score.value)
-        return total_delta / len(grouped_scores)
+            number_of_pairs += 1
+            total_delta += float(pair_scores[0].score.value) - float(pair_scores[1].score.value)
+        return total_delta / number_of_pairs
 
     return metric
 
