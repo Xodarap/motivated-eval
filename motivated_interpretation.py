@@ -52,6 +52,8 @@ def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
                 continue
             number_of_pairs += 1
             total_delta += float(pair_scores[0].score.value) - float(pair_scores[1].score.value)
+        if number_of_pairs == 0:
+            return 0.0
         return total_delta / number_of_pairs
 
     return metric
