@@ -35,10 +35,20 @@ def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
     """
 
     def metric(scores: list[SampleScore]) -> float:
-        total = 0.0
-        for item in scores:
-            total += to_float(item.score.value)
-        return scores[0].score.value - scores[1].score.value
+        grouped_scores: dict[str, list[SampleScore]] = {}
+        for score in scores:
+            pair_id = score.sample_metadata.get('pair_id')
+            if pair_id is None:
+                raise KeyError("SampleScore missing 'pair_id' in sample_metadata")
+            if pair_id not in grouped_scores:
+                grouped_scores[pair_id] = []
+            grouped_scores[pair_id].append(score)
+        total_delta = 0
+        for pair_id, pair_scores in grouped_scores.items():
+            if len(pair_scores) != 2:
+                continue
+            total_delta += pair_scores[0].score.value - pair_scores[1].score.value
+        return total_delta / len(grouped_scores)
 
     return metric
 
@@ -131,7 +141,7 @@ def create_motivated_interpretation_task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
         scorer=match(),
-        metrics=[accuracy(), grouped(bias_score(), group_key="pair_id")]
+        metrics=[accuracy(), bias_score()]
     )
 
 
