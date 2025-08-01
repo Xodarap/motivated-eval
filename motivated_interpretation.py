@@ -52,11 +52,7 @@ def bias_score(bias_type: Literal["treatment", "uncontroversial_treatment"] = "t
     r"""Compute proportion of total answers which are correct.
 
     Args:
-       to_float: Function for mapping `Value` to float for computing
-          metrics. The default `value_to_float()` maps CORRECT ("C") to 1.0,
-          INCORRECT ("I") to 0, PARTIAL ("P") to 0.5, and NOANSWER ("N") to 0,
-          casts numeric values to float directly, and prints a warning and returns
-          0 if the Value is a complex object (list or dict).
+       bias_type: "treatment" or "uncontroversial_treatment" depending on which condition to compare to the baseline
 
     Returns:
        Accuracy metric
