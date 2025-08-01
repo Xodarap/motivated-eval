@@ -256,6 +256,7 @@ def motivated_interpretation_solver() -> Solver:
     
     return solve
 
+@task
 def create_motivated_interpretation_task(
     dataset_path: Optional[str] = None,
     samples: Optional[List[Sample]] = None
@@ -282,11 +283,6 @@ def create_motivated_interpretation_task(
         scorer=match()
     )
 
-
-@task
-def motivated_interpretation() -> Task:
-    """Default task for inspect eval."""
-    return create_motivated_interpretation_task()
 
 
 def create_example_samples() -> List[Sample]:
