@@ -21,31 +21,22 @@ git-crypt unlock /path/to/git-crypt-key
 
 Install dependencies with uv:
 ```bash
-uv install
+uv sync
 ```
 
-## Running Tests
-
-Run the bias_score metric tests:
-```bash
-uv run python -m pytest test_bias_score.py -v
-```
-
-Run all tests:
-```bash
-uv run python -m pytest -v
-```
 
 ## Running the Evaluation
 
-Test the task creation:
-```bash
-uv run python -c "from motivated_interpretation import create_motivated_interpretation_task; task = create_motivated_interpretation_task(); print(f'Task created with {len(task.dataset)} samples')"
-```
 
 Run the full evaluation:
 ```bash
 uv run inspect eval motivated_interpretation.py --model anthropic/claude-3-5-haiku-20241022
+```
+
+To run it with a prompt to be biased:
+
+```bash
+uv run inspect eval motivated_interpretation.py --model anthropic/claude-3-5-haiku-20241022 -T bias=True
 ```
 
 ## Data Encryption

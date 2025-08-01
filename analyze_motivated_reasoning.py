@@ -1,5 +1,46 @@
 import numpy as np
 from scipy import stats
+from inspect_ai.analysis.beta import (
+    SampleMessages, SampleSummary, samples_df
+)
+import pandas as pd
+from typing import List, Tuple
+
+
+def get_deltas(scores_df: pd.DataFrame) -> List[Tuple[float, float]]:
+    """
+    Get the deltas between the baseline and treatment scores.
+    Args:
+        scores: List of SampleScore objects
+    Returns:
+        List of tuples containing the deltas between the baseline and treatment scores.
+        The first element of the tuple is the delta between the baseline and treatment scores.
+        The second element of the tuple is the delta between the baseline and uncontroversial treatment scores.
+    """
+   # Pivot and filter complete pairs
+    pivot_df = scores_df.pivot_table(
+        index='metadata_pair_id', 
+        columns='metadata_condition', 
+        values='score_motivated_interpretation_scorer', 
+        aggfunc='first'
+    )
+    print(pivot_df)
+    
+    required_conditions = ['baseline', 'treatment', 'uncontroversial_treatment']
+    complete_pairs = pivot_df.dropna(subset=required_conditions)
+    
+    if complete_pairs.empty:
+        return []
+    
+    # Vectorized delta calculation
+    treatment_deltas = complete_pairs['baseline'].astype(float) - complete_pairs['treatment'].astype(float)
+    uncontroversial_deltas = complete_pairs['baseline'].astype(float) - complete_pairs['uncontroversial_treatment'].astype(float)
+    
+    # Convert to list of tuples
+    deltas = list(zip(treatment_deltas.astype(float), uncontroversial_deltas.astype(float)))
+    
+    return deltas
+
 
 
 def analyze_motivated_reasoning_from_deltas(deltas: list[tuple[float, float]]) -> dict:
@@ -97,6 +138,11 @@ Conclusion: {results["interpretation"]}
 # Example usage
 if __name__ == "__main__":
     # This would be called after running the evaluation
-    deltas = [(2, 0), (1, 0), (2, 1), (2, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (1, 0)]
+    
+    samples =samples_df(
+        logs="logs/2025-08-01T14-49-50-07-00_motivated-interpretation_WsUY4P5AqWkn9RmxZDfsEf.eval", 
+        columns = SampleSummary + SampleMessages
+    )
+    deltas = get_deltas(samples)
     results = analyze_motivated_reasoning_from_deltas(deltas)
     print(create_summary_report(results))
