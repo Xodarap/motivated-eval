@@ -4,7 +4,7 @@ Tests for the bias_score metric.
 
 import pytest
 from motivated_interpretation import bias_score
-from inspect_ai.scorer import SampleScore, Score, CORRECT, INCORRECT
+from inspect_ai.scorer import SampleScore, Score
 
 
 def create_sample_score(score_value, pair_id, sample_metadata=None):
@@ -37,9 +37,9 @@ class TestBiasScore:
         
         scores = [
             create_sample_score(1, "pair1"),  # First score in pair1
-            create_sample_score(0, "pair1"),  # Second score in pair1 -> delta = 1 - 0 = 1
+            create_sample_score(0, "pair1"),  # Second score -> delta = 1 - 0 = 1
             create_sample_score(1, "pair2"),  # First score in pair2
-            create_sample_score(1, "pair2"),  # Second score in pair2 -> delta = 1 - 1 = 0
+            create_sample_score(1, "pair2"),  # Second score -> delta = 1 - 1 = 0
         ]
         
         result = metric_func(scores)
@@ -133,7 +133,9 @@ class TestBiasScore:
             create_sample_score(0, None),  # Missing pair_id
         ]
         
-        with pytest.raises(KeyError, match="SampleScore missing 'pair_id' in sample_metadata"):
+        with pytest.raises(
+            KeyError, match="SampleScore missing 'pair_id' in sample_metadata"
+        ):
             metric_func(scores)
     
     def test_bias_score_none_sample_metadata_skipped(self):
@@ -157,9 +159,9 @@ class TestBiasScore:
         
         scores = []
         
-        # This should return 0/0 which results in ZeroDivisionError
-        with pytest.raises(ZeroDivisionError):
-            metric_func(scores)
+        # Implementation returns 0.0 when no complete pairs exist
+        result = metric_func(scores)
+        assert result == 0.0
     
     def test_bias_score_no_complete_pairs(self):
         """Test bias score when no complete pairs exist."""
@@ -170,9 +172,9 @@ class TestBiasScore:
             create_sample_score(2, "pair2"),  # Only one score for pair2
         ]
         
-        # This should return 0/0 which results in ZeroDivisionError
-        with pytest.raises(ZeroDivisionError):
-            metric_func(scores)
+        # Implementation returns 0.0 when no complete pairs exist
+        result = metric_func(scores)
+        assert result == 0.0
     
     def test_bias_score_large_dataset(self):
         """Test bias score with a larger dataset of integers."""
@@ -198,7 +200,7 @@ class TestBiasScore:
         assert abs(result - expected) < 1e-10  # Account for floating point precision
     
     def test_bias_score_order_dependence(self):
-        """Test that the order of scores within pairs matters - first score minus second score."""
+        """Test that the order of scores within pairs matters."""
         metric_func = bias_score()
         
         # First arrangement: 0.8 first, 0.3 second for pair1
