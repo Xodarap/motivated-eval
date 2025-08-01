@@ -7,20 +7,15 @@ based on the presence of irrelevant evidence F suggesting intervention J also re
 secondary outcome Y.
 """
 
-import re
-from typing import Any, Dict, List, Optional, Tuple, Literal
-from dataclasses import dataclass
-from inspect_ai import Task, eval, task
-from inspect_ai.dataset import Sample, hf_dataset
-from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT, match, accuracy, grouped, Metric, SampleScore, ValueToFloat, metric, value_to_float
-from inspect_ai.solver import Solver, solver, Generate, system_message, generate
-from inspect_ai.model import ChatMessageUser, Model
+from typing import List, Optional, Tuple, Literal
+from inspect_ai import Task, task
+from inspect_ai.dataset import Sample
+from inspect_ai.scorer import Score,  scorer, CORRECT, INCORRECT, accuracy, Metric, SampleScore,  metric
+from inspect_ai.solver import system_message, generate
 import numpy as np
-from scipy import stats
 from generate_triplets import generate_all_triplets
 
-
-def get_deltas(scores: list[SampleScore]) -> list[tuple[float, float]]:
+def get_deltas(scores: list[SampleScore]) -> list[Tuple[float, float]]:
     grouped_scores: dict[str, list[SampleScore]] = {}
     deltas = []
     for score in scores:
@@ -119,17 +114,6 @@ def extract_rating(text: str) -> Optional[int]:
             pass
     
     return None
-
-@solver
-def motivated_interpretation_solver() -> Solver:
-    """Solver that generates responses for motivated interpretation questions."""
-    
-    async def solve(state, generate: Generate):
-        # Standard generation with instruction to provide reasoning then select one of the 7 options
-        state.system_message = ""
-        return await generate(state)
-    
-    return solve
 
 @task
 def motivated_interpretation(bias: bool=False) -> Task:
