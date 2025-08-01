@@ -77,3 +77,5 @@ checkpoints/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+git-crypt-key
