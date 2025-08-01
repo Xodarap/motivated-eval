@@ -38,9 +38,14 @@ uv run python -m pytest -v
 
 ## Running the Evaluation
 
-Run the motivated interpretation task:
+Test the task creation:
 ```bash
-uv run python -c "from motivated_interpretation import create_motivated_interpretation_task; print('Task created successfully')"
+uv run python -c "from motivated_interpretation import create_motivated_interpretation_task; task = create_motivated_interpretation_task(); print(f'Task created with {len(task.dataset)} samples')"
+```
+
+Run the full evaluation:
+```bash
+uv run inspect eval motivated_interpretation.py --model anthropic/claude-3-5-haiku-20241022
 ```
 
 ## Data Encryption
