@@ -57,11 +57,14 @@ htmlcov/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Data files
+# Data files (note: data/ folder is encrypted with git-crypt)
+# Ignore CSV/JSON/parquet files except in data/ folder which is encrypted
 *.csv
+!data/*.csv
 *.json
+!data/*.json
 *.parquet
-data/
+!data/*.parquet
 datasets/
 
 # Model outputs
