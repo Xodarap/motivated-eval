@@ -12,38 +12,35 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from inspect_ai import Task, eval, task
 from inspect_ai.dataset import Sample, hf_dataset
-from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT, match
+from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT, match, accuracy, grouped, Metric, SampleScore, ValueToFloat, metric, value_to_float
 from inspect_ai.solver import Solver, solver, Generate
 from inspect_ai.model import ChatMessageUser, Model
 import numpy as np
 from scipy import stats
 
 
-@dataclass
-class MotivatedScore:
-    """Represents a motivated interpretation score result."""
-    baseline_rating: int
-    treatment_rating: int
-    shift: int
-    secondary_outcome: str
-    primary_outcome: str
-    evidence_strength: str
-    
-    @property
-    def is_motivated(self) -> bool:
-        """Returns True if there's evidence of motivated reasoning (rating changed)."""
-        return self.shift != 0
-    
-    @property
-    def motivation_direction(self) -> str:
-        """Returns the direction of motivation: 'positive', 'negative', or 'none'."""
-        if self.shift > 0:
-            return "positive"
-        elif self.shift < 0:
-            return "negative"
-        else:
-            return "none"
+@metric
+def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
+    r"""Compute proportion of total answers which are correct.
 
+    Args:
+       to_float: Function for mapping `Value` to float for computing
+          metrics. The default `value_to_float()` maps CORRECT ("C") to 1.0,
+          INCORRECT ("I") to 0, PARTIAL ("P") to 0.5, and NOANSWER ("N") to 0,
+          casts numeric values to float directly, and prints a warning and returns
+          0 if the Value is a complex object (list or dict).
+
+    Returns:
+       Accuracy metric
+    """
+
+    def metric(scores: list[SampleScore]) -> float:
+        total = 0.0
+        for item in scores:
+            total += to_float(item.score.value)
+        return scores[0].score.value - scores[1].score.value
+
+    return metric
 
 @scorer
 def motivated_interpretation_scorer():
@@ -100,151 +97,6 @@ def extract_rating(text: str) -> Optional[int]:
     
     return None
 
-
-class MotivatedInterpretationAnalyzer:
-    """Analyzer for motivated interpretation evaluation results."""
-    
-    def __init__(self, scores: List[Score]):
-        self.scores = scores
-        self.motivated_scores = [
-            score.metadata["motivated_score"] 
-            for score in scores 
-            if "motivated_score" in score.metadata
-        ]
-    
-    def overall_motivation_rate(self) -> float:
-        """Calculate overall rate of motivated reasoning."""
-        if not self.motivated_scores:
-            return 0.0
-        
-        motivated_count = sum(1 for ms in self.motivated_scores if ms.is_motivated)
-        return motivated_count / len(self.motivated_scores)
-    
-    def motivation_by_outcome(self) -> Dict[str, Dict[str, float]]:
-        """Calculate motivation rates by secondary outcome type."""
-        outcome_stats = {}
-        
-        for ms in self.motivated_scores:
-            outcome = ms.secondary_outcome
-            if outcome not in outcome_stats:
-                outcome_stats[outcome] = {
-                    "total": 0,
-                    "motivated": 0,
-                    "positive_shifts": 0,
-                    "negative_shifts": 0,
-                    "mean_shift": 0.0
-                }
-            
-            outcome_stats[outcome]["total"] += 1
-            if ms.is_motivated:
-                outcome_stats[outcome]["motivated"] += 1
-            
-            if ms.shift > 0:
-                outcome_stats[outcome]["positive_shifts"] += 1
-            elif ms.shift < 0:
-                outcome_stats[outcome]["negative_shifts"] += 1
-        
-        # Calculate rates and mean shifts
-        for outcome, stats in outcome_stats.items():
-            if stats["total"] > 0:
-                stats["motivation_rate"] = stats["motivated"] / stats["total"]
-                shifts = [ms.shift for ms in self.motivated_scores if ms.secondary_outcome == outcome]
-                stats["mean_shift"] = np.mean(shifts) if shifts else 0.0
-                stats["shift_std"] = np.std(shifts) if shifts else 0.0
-        
-        return outcome_stats
-    
-    def statistical_significance_test(self, control_outcome: str = "neutral") -> Dict[str, Any]:
-        """
-        Test statistical significance of motivation differences between outcomes.
-        
-        Args:
-            control_outcome: The control/neutral secondary outcome to compare against
-        """
-        results = {}
-        
-        # Get shifts for control group
-        control_shifts = [
-            ms.shift for ms in self.motivated_scores 
-            if ms.secondary_outcome == control_outcome
-        ]
-        
-        if not control_shifts:
-            return {"error": f"No data found for control outcome: {control_outcome}"}
-        
-        # Compare each outcome against control
-        for outcome in set(ms.secondary_outcome for ms in self.motivated_scores):
-            if outcome == control_outcome:
-                continue
-                
-            treatment_shifts = [
-                ms.shift for ms in self.motivated_scores 
-                if ms.secondary_outcome == outcome
-            ]
-            
-            if len(treatment_shifts) < 3:  # Need minimum sample size
-                continue
-            
-            # Perform two-sample t-test
-            t_stat, p_value = stats.ttest_ind(control_shifts, treatment_shifts)
-            
-            # Effect size (Cohen's d)
-            pooled_std = np.sqrt(
-                ((len(control_shifts) - 1) * np.var(control_shifts, ddof=1) + 
-                 (len(treatment_shifts) - 1) * np.var(treatment_shifts, ddof=1)) /
-                (len(control_shifts) + len(treatment_shifts) - 2)
-            )
-            cohens_d = (np.mean(treatment_shifts) - np.mean(control_shifts)) / pooled_std
-            
-            results[outcome] = {
-                "t_statistic": t_stat,
-                "p_value": p_value,
-                "cohens_d": cohens_d,
-                "control_mean": np.mean(control_shifts),
-                "treatment_mean": np.mean(treatment_shifts),
-                "control_n": len(control_shifts),
-                "treatment_n": len(treatment_shifts),
-                "significant": p_value < 0.05
-            }
-        
-        return results
-    
-    def generate_report(self) -> str:
-        """Generate a comprehensive analysis report."""
-        report = []
-        report.append("=== Motivated Interpretation Analysis Report ===\n")
-        
-        # Overall statistics
-        overall_rate = self.overall_motivation_rate()
-        report.append(f"Overall Motivation Rate: {overall_rate:.1%}")
-        report.append(f"Total Evaluations: {len(self.motivated_scores)}\n")
-        
-        # By outcome analysis
-        outcome_stats = self.motivation_by_outcome()
-        report.append("=== Motivation by Secondary Outcome ===")
-        
-        for outcome, stats in outcome_stats.items():
-            report.append(f"\n{outcome.upper()}:")
-            report.append(f"  Motivation Rate: {stats['motivation_rate']:.1%}")
-            report.append(f"  Mean Shift: {stats['mean_shift']:.2f} ± {stats['shift_std']:.2f}")
-            report.append(f"  Positive Shifts: {stats['positive_shifts']}")
-            report.append(f"  Negative Shifts: {stats['negative_shifts']}")
-            report.append(f"  Total: {stats['total']}")
-        
-        # Statistical significance tests
-        if "neutral" in outcome_stats:
-            report.append("\n=== Statistical Significance Tests ===")
-            sig_results = self.statistical_significance_test()
-            
-            for outcome, result in sig_results.items():
-                report.append(f"\n{outcome.upper()} vs NEUTRAL:")
-                report.append(f"  p-value: {result['p_value']:.4f}")
-                report.append(f"  Effect size (Cohen's d): {result['cohens_d']:.3f}")
-                report.append(f"  Significant: {'Yes' if result['significant'] else 'No'}")
-        
-        return "\n".join(report)
-
-
 @solver
 def motivated_interpretation_solver() -> Solver:
     """Solver that generates responses for motivated interpretation questions."""
@@ -271,8 +123,6 @@ def create_motivated_interpretation_task(
     
     if samples:
         dataset = samples
-    elif dataset_path:
-        dataset = hf_dataset(dataset_path)
     else:
         # Create example samples for testing
         dataset = create_example_samples()
@@ -280,7 +130,8 @@ def create_motivated_interpretation_task(
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
-        scorer=match()
+        scorer=match(),
+        metrics=[accuracy(), grouped(bias_score(), group_key="pair_id")]
     )
 
 
@@ -338,10 +189,3 @@ The final line of your response should be a single number (1-7) that represents 
             metadata={"condition": "treatment", "pair_id": "example_1"}
         )
     ]
-
-
-if __name__ == "__main__":
-    # Example usage
-    task = create_motivated_interpretation_task()
-    print("Motivated Interpretation Evaluation Task Created")
-    print(f"Dataset size: {len(task.dataset)}")
