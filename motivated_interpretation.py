@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from inspect_ai import Task, eval, task
 from inspect_ai.dataset import Sample, hf_dataset
-from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT
+from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT, match
 from inspect_ai.solver import Solver, solver, Generate
 from inspect_ai.model import ChatMessageUser, Model
 import numpy as np
@@ -45,8 +45,8 @@ class MotivatedScore:
             return "none"
 
 
-@scorer(metrics=["accuracy", "bias_score", "motivation_rate"])
-def motivated_interpretation_scorer() -> Scorer:
+@scorer
+def motivated_interpretation_scorer():
     """
     Scorer for motivated interpretation evaluation.
     
@@ -56,50 +56,22 @@ def motivated_interpretation_scorer() -> Scorer:
     
     async def score(state, target) -> Score:
         # Extract rating from model response
-        baseline_rating = extract_rating(state.user_prompt)
-        treatment_rating = extract_rating(state.output.completion)
+        rating = extract_rating(state.output.completion)
         
-        if baseline_rating is None or treatment_rating is None:
+        if rating is None:
             return Score(
                 value=INCORRECT,
                 explanation="Could not extract valid rating from response"
             )
         
-        # Calculate shift in rating
-        shift = treatment_rating - baseline_rating
-        
-        # Extract metadata from target
-        target_data = eval(target.text) if isinstance(target.text, str) else target.text
-        secondary_outcome = target_data.get("secondary_outcome", "unknown")
-        primary_outcome = target_data.get("primary_outcome", "unknown")
-        evidence_strength = target_data.get("evidence_strength", "unknown")
-        
-        # Create motivated score
-        motivated_score = MotivatedScore(
-            baseline_rating=baseline_rating,
-            treatment_rating=treatment_rating,
-            shift=shift,
-            secondary_outcome=secondary_outcome,
-            primary_outcome=primary_outcome,
-            evidence_strength=evidence_strength
-        )
-        
-        # Score is correct if no motivated reasoning occurred (shift = 0)
-        accuracy = CORRECT if shift == 0 else INCORRECT
-        
+        # For now, just score based on whether we got a valid rating
+        # The actual motivated reasoning analysis will be done in post-processing
         return Score(
-            value=accuracy,
-            explanation=f"Baseline: {baseline_rating}, Treatment: {treatment_rating}, Shift: {shift}",
+            value=CORRECT,
+            explanation=f"Successfully extracted rating: {rating}",
             metadata={
-                "motivated_score": motivated_score,
-                "shift": shift,
-                "baseline_rating": baseline_rating,
-                "treatment_rating": treatment_rating,
-                "secondary_outcome": secondary_outcome,
-                "primary_outcome": primary_outcome,
-                "evidence_strength": evidence_strength,
-                "is_motivated": motivated_score.is_motivated,
-                "motivation_direction": motivated_score.motivation_direction
+                "rating": rating,
+                "response": state.output.completion
             }
         )
     
@@ -279,15 +251,11 @@ def motivated_interpretation_solver() -> Solver:
     
     async def solve(state, generate: Generate):
         # Standard generation with instruction to provide reasoning then select one of the 7 options
-        system_prompt = """You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. 
-
-First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option."""
-        
-        return await generate(system_prompt)
+        state.system_message = "You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option."
+        return await generate(state)
     
     return solve
 
-@task
 def create_motivated_interpretation_task(
     dataset_path: Optional[str] = None,
     samples: Optional[List[Sample]] = None
@@ -311,9 +279,15 @@ def create_motivated_interpretation_task(
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
-        scorer=motivated_interpretation_scorer(),
+        scorer=match(),
         max_messages=1
     )
+
+
+@task
+def motivated_interpretation() -> Task:
+    """Default task for inspect eval."""
+    return create_motivated_interpretation_task()
 
 
 def create_example_samples() -> List[Sample]:
@@ -356,20 +330,12 @@ Based on the study data, which statement best describes the evidence for or agai
     return [
         Sample(
             input=baseline_prompt,
-            target=str({
-                "secondary_outcome": "baseline", 
-                "primary_outcome": "mortality_reduction",
-                "evidence_strength": "weak_support"
-            }),
+            target="5",  # Expected answer for baseline
             metadata={"condition": "baseline", "pair_id": "example_1"}
         ),
         Sample(
             input=treatment_prompt, 
-            target=str({
-                "secondary_outcome": "premarital_activity",
-                "primary_outcome": "mortality_reduction", 
-                "evidence_strength": "weak_support"
-            }),
+            target="5",  # Expected answer for treatment (should be same if no bias)
             metadata={"condition": "treatment", "pair_id": "example_1"}
         )
     ]
