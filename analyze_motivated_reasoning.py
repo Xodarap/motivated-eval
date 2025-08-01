@@ -5,6 +5,41 @@ from inspect_ai.analysis.beta import (
 )
 import pandas as pd
 from typing import List, Tuple
+import glob
+import os
+from datetime import datetime
+
+
+def find_most_recent_log_file(log_directories: List[str] = ["logs", "analysis"]) -> str:
+    """
+    Find the most recent motivated-interpretation evaluation log file.
+    
+    Args:
+        log_directories: List of directories to search for log files
+    
+    Returns:
+        Path to the most recent log file
+    
+    Raises:
+        FileNotFoundError: If no log files are found
+    """
+    all_log_files = []
+    
+    for directory in log_directories:
+        if os.path.exists(directory):
+            pattern = os.path.join(directory, "*motivated-interpretation*.eval")
+            log_files = glob.glob(pattern)
+            all_log_files.extend(log_files)
+    
+    if not all_log_files:
+        raise FileNotFoundError(f"No motivated-interpretation log files found in directories: {log_directories}")
+    
+    # Sort by filename (which contains timestamp) to get most recent
+    all_log_files.sort(reverse=True)
+    most_recent = all_log_files[0]
+    
+    print(f"Found {len(all_log_files)} log files. Using most recent: {most_recent}")
+    return most_recent
 
 
 def get_deltas(scores_df: pd.DataFrame) -> List[Tuple[float, float]]:
@@ -137,12 +172,22 @@ Conclusion: {results["interpretation"]}
 
 # Example usage
 if __name__ == "__main__":
-    # This would be called after running the evaluation
-    
-    samples =samples_df(
-        logs="logs/2025-08-01T14-49-50-07-00_motivated-interpretation_WsUY4P5AqWkn9RmxZDfsEf.eval", 
-        columns = SampleSummary + SampleMessages
-    )
-    deltas = get_deltas(samples)
-    results = analyze_motivated_reasoning_from_deltas(deltas)
-    print(create_summary_report(results))
+    # Find and use the most recent log file
+    try:
+        log_file = find_most_recent_log_file()
+        
+        samples = samples_df(
+            logs=log_file, 
+            columns=SampleSummary + SampleMessages
+        )
+        
+        deltas = get_deltas(samples)
+        results = analyze_motivated_reasoning_from_deltas(deltas)
+        print(create_summary_report(results))
+        
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        print("Please run an evaluation first to generate log files.")
+    except Exception as e:
+        print(f"Error analyzing results: {e}")
+        print("Please check that the log file contains valid motivated interpretation results.")
