@@ -1,0 +1,103 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Motivated Interpretation (Grok-3-Mini)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "inspect_ai",
+            "args": [
+                "eval",
+                "motivated_interpretation.py",
+                "--model",
+                "grok/grok-3-mini",
+                "--limit",
+                "10"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "Debug: Analyze Motivated Reasoning",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/analyze_motivated_reasoning.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": true,
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Debug: Analyze Motivated Reasoning (Manual Log Path)",
+            "type": "debugpy", 
+            "request": "launch",
+            "program": "${workspaceFolder}/analyze_motivated_reasoning.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "MANUAL_LOG_FILE": "${input:logFile}"
+            },
+            "args": [],
+            "justMyCode": true,
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Debug: Run Motivated Interpretation Eval",
+            "type": "debugpy",
+            "request": "launch", 
+            "module": "inspect_ai",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "eval",
+                "motivated_interpretation.py", 
+                "--model",
+                "anthropic/claude-3-5-haiku-20241022"
+            ],
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Debug: Run Motivated Interpretation Eval (Biased)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "inspect_ai", 
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "eval",
+                "motivated_interpretation.py",
+                "--model", 
+                "anthropic/claude-3-5-haiku-20241022",
+                "-T",
+                "bias=True"
+            ],
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "python": "${workspaceFolder}/.venv/bin/python"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "logFile",
+            "description": "Path to evaluation log file",
+            "default": "analysis/2025-08-01T14-38-26-07-00_motivated-interpretation_7F5yAvt3j7S6JMJC72gFdn.eval",
+            "type": "promptString"
+        }
+    ]
+}
