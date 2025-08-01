@@ -150,7 +150,7 @@ def create_motivated_interpretation_task(
         dataset = samples
     else:
         # Create example samples for testing
-        dataset = create_example_samples()
+        dataset = create_samples()
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
@@ -163,10 +163,12 @@ def create_samples() -> List[Sample]:
     
     triplets = generate_all_triplets()
     conditions = ["baseline", "treatment", "uncontroversial_treatment"]
+    samples = []
     for question_index, triplet in enumerate(triplets):
         for i in range(3):
-            yield Sample(
+            samples.append(Sample(
                 input=triplet[i],
                 target="5",  # Expected answer for baseline
                 metadata={"condition": conditions[i], "pair_id": f"sample_{question_index}"}
-            )
+            ))
+    return samples
