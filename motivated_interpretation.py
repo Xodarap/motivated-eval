@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from inspect_ai import Task, eval, task
 from inspect_ai.dataset import Sample, hf_dataset
 from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT, match, accuracy, grouped, Metric, SampleScore, ValueToFloat, metric, value_to_float
-from inspect_ai.solver import Solver, solver, Generate
+from inspect_ai.solver import Solver, solver, Generate, system_message, generate
 from inspect_ai.model import ChatMessageUser, Model
 import numpy as np
 from scipy import stats
@@ -128,19 +128,22 @@ def motivated_interpretation_solver() -> Solver:
     
     async def solve(state, generate: Generate):
         # Standard generation with instruction to provide reasoning then select one of the 7 options
-        state.system_message = "You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option. Do not include any other text or comments after the number."
+        state.system_message = ""
         return await generate(state)
     
     return solve
 
 @task
-def create_motivated_interpretation_task() -> Task:
+def motivated_interpretation() -> Task:
     """
     Create a motivated interpretation evaluation task.
     """
     return Task(
         dataset=list(create_samples()),
-        solver=motivated_interpretation_solver(),
+        solver=[system_message("""You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option. Do not include any other text or comments after the number.
+                              """), 
+                              generate()
+        ],
         scorer=match(),
         metrics=[accuracy(), bias_score("treatment"), uncontroversial_bias()]
     )
