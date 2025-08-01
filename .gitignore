@@ -57,11 +57,10 @@ htmlcov/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Data files
+# Data files (note: data/ folder is encrypted with git-crypt)
 *.csv
 *.json
 *.parquet
-data/
 datasets/
 
 # Model outputs
