@@ -279,8 +279,7 @@ def create_motivated_interpretation_task(
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
-        scorer=match(),
-        max_messages=1
+        scorer=match()
     )
 
 
