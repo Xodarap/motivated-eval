@@ -37,6 +37,8 @@ def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
     def metric(scores: list[SampleScore]) -> float:
         grouped_scores: dict[str, list[SampleScore]] = {}
         for score in scores:
+            if score.sample_metadata is None:
+                continue
             pair_id = score.sample_metadata.get('pair_id')
             if pair_id is None:
                 raise KeyError("SampleScore missing 'pair_id' in sample_metadata")
@@ -47,7 +49,7 @@ def bias_score(to_float: ValueToFloat = value_to_float()) -> Metric:
         for pair_id, pair_scores in grouped_scores.items():
             if len(pair_scores) != 2:
                 continue
-            total_delta += pair_scores[0].score.value - pair_scores[1].score.value
+            total_delta += int(pair_scores[0].score.value) - int(pair_scores[1].score.value)
         return total_delta / len(grouped_scores)
 
     return metric
