@@ -92,7 +92,7 @@ def extract_rating(text: str) -> Optional[int]:
     if lines:
         last_line = lines[-1].strip()
         try:
-            rating = int(last_line)
+            rating = int(last_line[0])
             if 1 <= rating <= 7:
                 return rating
         except ValueError:
@@ -251,7 +251,7 @@ def motivated_interpretation_solver() -> Solver:
     
     async def solve(state, generate: Generate):
         # Standard generation with instruction to provide reasoning then select one of the 7 options
-        state.system_message = "You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option."
+        state.system_message = "You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option. Do not include any other text or comments after the number."
         return await generate(state)
     
     return solve
