@@ -20,6 +20,27 @@ from scipy import stats
 from generate_triplets import generate_all_triplets
 
 
+def get_deltas(scores: list[SampleScore]) -> list[float]:
+    grouped_scores: dict[str, list[SampleScore]] = {}
+    deltas = []
+    for score in scores:
+        if score.sample_metadata is None:
+            continue
+        pair_id = score.sample_metadata.get('pair_id')
+        if pair_id is None:
+            raise KeyError("SampleScore missing 'pair_id' in sample_metadata")
+        if pair_id not in grouped_scores:
+            grouped_scores[pair_id] = []
+        grouped_scores[pair_id].append(score)
+    for pair_id, pair_scores in grouped_scores.items():
+        baseline_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "baseline"]
+        comparison_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == type]
+        if len(baseline_score) == 0 or len(comparison_score) == 0:
+            continue
+        
+        deltas.append(baseline_score[0] - comparison_score[0])
+    return deltas
+
 @metric
 def uncontroversial_bias() -> Metric:
     return bias_score("uncontroversial_treatment")
@@ -40,29 +61,10 @@ def bias_score(type: Literal["treatment", "uncontroversial_treatment"] = "treatm
     """
 
     def metric(scores: list[SampleScore]) -> float:
-        grouped_scores: dict[str, list[SampleScore]] = {}
-        for score in scores:
-            if score.sample_metadata is None:
-                continue
-            pair_id = score.sample_metadata.get('pair_id')
-            if pair_id is None:
-                raise KeyError("SampleScore missing 'pair_id' in sample_metadata")
-            if pair_id not in grouped_scores:
-                grouped_scores[pair_id] = []
-            grouped_scores[pair_id].append(score)
-        total_delta = 0
-        number_of_pairs = 0
-        for pair_id, pair_scores in grouped_scores.items():
-            baseline_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "baseline"]
-            comparison_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == type]
-            if len(baseline_score) == 0 or len(comparison_score) == 0:
-                continue
-            
-            number_of_pairs += 1
-            total_delta += baseline_score[0] - comparison_score[0]
-        if number_of_pairs == 0:
+        deltas = get_deltas(scores)
+        if len(deltas) == 0:
             return 0.0
-        return total_delta / number_of_pairs
+        return np.mean(deltas)
 
     return metric
 
