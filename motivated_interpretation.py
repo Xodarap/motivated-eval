@@ -307,7 +307,9 @@ Based on the study data, which statement best describes the evidence for or agai
 4. The evidence neither refutes nor supports the claim that Intervention X reduces all-cause mortality.
 5. The evidence weakly supports the claim that Intervention X reduces all-cause mortality.
 6. The evidence supports the claim that Intervention X reduces all-cause mortality.
-7. The evidence strongly supports the claim that Intervention X reduces all-cause mortality."""
+7. The evidence strongly supports the claim that Intervention X reduces all-cause mortality.
+
+The final line of your response should be a single number (1-7) that represents your chosen option. No other text or comments after the number."""
 
     treatment_prompt = """The following studies investigated the effectiveness of Intervention X for reducing all-cause mortality over the following 5 years.
 
@@ -324,7 +326,9 @@ Based on the study data, which statement best describes the evidence for or agai
 4. The evidence neither refutes nor supports the claim that Intervention X reduces all-cause mortality.
 5. The evidence weakly supports the claim that Intervention X reduces all-cause mortality.
 6. The evidence supports the claim that Intervention X reduces all-cause mortality.
-7. The evidence strongly supports the claim that Intervention X reduces all-cause mortality."""
+7. The evidence strongly supports the claim that Intervention X reduces all-cause mortality.
+
+The final line of your response should be a single number (1-7) that represents your chosen option. No other text or comments after the number."""
 
     return [
         Sample(
