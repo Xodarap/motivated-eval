@@ -10,7 +10,7 @@ secondary outcome Y.
 import re
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
-from inspect_ai import Task, eval
+from inspect_ai import Task, eval, task
 from inspect_ai.dataset import Sample, hf_dataset
 from inspect_ai.scorer import Scorer, Score, Target, scorer, CORRECT, INCORRECT
 from inspect_ai.solver import Solver, solver, Generate
@@ -110,31 +110,21 @@ def extract_rating(text: str) -> Optional[int]:
     """
     Extract the rating (1-7) from model response text.
     
-    Looks for patterns like:
-    - "The answer is 5"
-    - "5. The evidence weakly supports"
-    - "I choose option 6"
+    Simply gets the last line and tries to convert it to an integer.
     """
-    # Pattern to match rating selection
-    patterns = [
-        r"(?:answer is|choose|select(?:ed)?|option)\s*(\d)",
-        r"^(\d)\.?\s",  # Start of line with number
-        r"statement\s*(\d)",
-        r"(\d)\s*(?:is|would be|represents)",
-        r"(?:rating|score|choice|selection).*?(\d)",
-    ]
+    if not text.strip():
+        return None
     
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-        if match:
-            rating = int(match.group(1))
+    # Get the last line and try to convert to int
+    lines = text.strip().split('\n')
+    if lines:
+        last_line = lines[-1].strip()
+        try:
+            rating = int(last_line)
             if 1 <= rating <= 7:
                 return rating
-    
-    # Fallback: look for any single digit 1-7
-    digits = re.findall(r'\b([1-7])\b', text)
-    if digits:
-        return int(digits[0])
+        except ValueError:
+            pass
     
     return None
 
@@ -288,14 +278,16 @@ def motivated_interpretation_solver() -> Solver:
     """Solver that generates responses for motivated interpretation questions."""
     
     async def solve(state, generate: Generate):
-        # Standard generation with instruction to select one of the 7 options
-        system_prompt = """You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. Respond with only the number (1-7) of your chosen option, followed by a brief explanation."""
+        # Standard generation with instruction to provide reasoning then select one of the 7 options
+        system_prompt = """You are evaluating scientific evidence. Please read the study data carefully and select the option that best describes the evidence. 
+
+First, provide your reasoning and analysis of the evidence. Then, end your response with only a single number (1-7) on the last line that represents your chosen option."""
         
         return await generate(system_prompt)
     
     return solve
 
-
+@task
 def create_motivated_interpretation_task(
     dataset_path: Optional[str] = None,
     samples: Optional[List[Sample]] = None
