@@ -29,10 +29,10 @@ def generate_evidence_combos(num_combos: int = 100) -> List[Dict[str, List[float
             log_n = random.uniform(math.log10(10), math.log10(1000))
             n_values.append(int(10**log_n))
 
-        # Log-uniform distribution for p_value from 0.0005 to 0.05
+        # Log-uniform distribution for p_value from 0.005 to 0.05
         p_values = []
         for _ in range(3):
-            log_p = random.uniform(math.log10(0.0005), math.log10(0.05))
+            log_p = random.uniform(math.log10(0.005), math.log10(0.05))
             p_values.append(format_to_2sf(10**log_p))
 
         # Log-uniform distribution for effect_size from 0.1 to 10
@@ -80,7 +80,9 @@ def load_evidence_combos_from_csv(filename: str = "data/evidence_combos.csv") ->
     return combos
 
 
-def load_interventions_outcomes(filename: str = "data/all-cause-mortality-intervention-outcome.csv") -> List[Dict[str, str]]:
+def load_interventions_outcomes(
+    filename: str = "data/all-cause-mortality-intervention-outcome.csv",
+) -> List[Dict[str, str]]:
     """Load interventions and their outcomes from CSV."""
     interventions = []
     with open(filename, "r") as f:
