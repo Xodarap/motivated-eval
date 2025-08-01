@@ -20,6 +20,10 @@ from scipy import stats
 
 
 @metric
+def uncontroversial_bias() -> Metric:
+    return bias_score("uncontroversial_treatment")
+
+@metric
 def bias_score(type: Literal["treatment", "uncontroversial_treatment"] = "treatment") -> Metric:
     r"""Compute proportion of total answers which are correct.
 
@@ -146,9 +150,6 @@ def create_motivated_interpretation_task(
     else:
         # Create example samples for testing
         dataset = create_example_samples()
-    
-    def uncontroversial_bias():
-        return bias_score("uncontroversial_treatment")
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
