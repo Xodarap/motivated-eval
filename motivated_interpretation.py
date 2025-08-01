@@ -134,25 +134,12 @@ def motivated_interpretation_solver() -> Solver:
     return solve
 
 @task
-def create_motivated_interpretation_task(
-    dataset_path: Optional[str] = None,
-    samples: Optional[List[Sample]] = None
-) -> Task:
+def create_motivated_interpretation_task() -> Task:
     """
     Create a motivated interpretation evaluation task.
-    
-    Args:
-        dataset_path: Path to dataset file or HuggingFace dataset name
-        samples: List of Sample objects (alternative to dataset_path)
     """
-    
-    if samples:
-        dataset = samples
-    else:
-        # Create example samples for testing
-        dataset = create_samples()
     return Task(
-        dataset=dataset,
+        dataset=list(create_samples()),
         solver=motivated_interpretation_solver(),
         scorer=match(),
         metrics=[accuracy(), bias_score("treatment"), uncontroversial_bias()]
@@ -163,12 +150,10 @@ def create_samples() -> List[Sample]:
     
     triplets = generate_all_triplets()
     conditions = ["baseline", "treatment", "uncontroversial_treatment"]
-    samples = []
     for question_index, triplet in enumerate(triplets):
         for i in range(3):
-            samples.append(Sample(
+            yield Sample(
                 input=triplet[i],
                 target="5",  # Expected answer for baseline
                 metadata={"condition": conditions[i], "pair_id": f"sample_{question_index}"}
-            ))
-    return samples
+            )
