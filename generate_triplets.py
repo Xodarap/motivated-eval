@@ -46,7 +46,7 @@ def generate_evidence_combos(num_combos: int = 100) -> List[Dict[str, List[float
     return combos
 
 
-def write_evidence_combos_to_csv(combos: List[Dict[str, List[float]]], filename: str = "evidence_combos.csv"):
+def write_evidence_combos_to_csv(combos: List[Dict[str, List[float]]], filename: str = "data/evidence_combos.csv"):
     """Write evidence combinations to CSV file if it doesn't exist."""
     if os.path.exists(filename):
         print(f"{filename} already exists, skipping creation")
@@ -65,7 +65,7 @@ def write_evidence_combos_to_csv(combos: List[Dict[str, List[float]]], filename:
     print(f"Created {filename} with {len(combos)} evidence combinations")
 
 
-def load_evidence_combos_from_csv(filename: str = "evidence_combos.csv") -> List[Dict[str, List[float]]]:
+def load_evidence_combos_from_csv(filename: str = "data/evidence_combos.csv") -> List[Dict[str, List[float]]]:
     """Load evidence combinations from CSV file."""
     combos = []
     with open(filename, "r") as f:
@@ -80,7 +80,7 @@ def load_evidence_combos_from_csv(filename: str = "evidence_combos.csv") -> List
     return combos
 
 
-def load_interventions_outcomes(filename: str = "all-cause-mortality-intervention-outcome.csv") -> List[Dict[str, str]]:
+def load_interventions_outcomes(filename: str = "data/all-cause-mortality-intervention-outcome.csv") -> List[Dict[str, str]]:
     """Load interventions and their outcomes from CSV."""
     interventions = []
     with open(filename, "r") as f:
@@ -136,11 +136,11 @@ def generate_question_triplet(
 def generate_all_triplets(num_evidence_sets: int = 10) -> List[Tuple[str, str, str]]:
     """Generate all triplets by combining interventions with evidence sets."""
     # Load template
-    with open("all-cause-mortality.jinja", "r") as f:
+    with open("data/all-cause-mortality.jinja", "r") as f:
         template_str = f.read()
 
     # Generate or load evidence combos
-    evidence_combos_file = "evidence_combos.csv"
+    evidence_combos_file = "data/evidence_combos.csv"
     if not os.path.exists(evidence_combos_file):
         combos = generate_evidence_combos(100)
         write_evidence_combos_to_csv(combos, evidence_combos_file)
@@ -180,10 +180,10 @@ def main():
         triplets_json.append(triplet_data)
 
     # Write to JSON file
-    with open("generated_triplets.json", "w") as f:
+    with open("data/generated_triplets.json", "w") as f:
         json.dump(triplets_json, f, indent=2)
 
-    print(f"Generated {len(triplets)} triplets and saved to generated_triplets.json")
+    print(f"Generated {len(triplets)} triplets and saved to data/generated_triplets.json")
 
 
 if __name__ == "__main__":
