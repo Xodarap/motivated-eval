@@ -1,0 +1,11 @@
+[project]
+name = "motivated-eval"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "inspect-ai>=0.3.117",
+    "numpy>=2.0.0",
+    "pytest>=8.0.0",
+    "scipy>=1.14.0",
+]
