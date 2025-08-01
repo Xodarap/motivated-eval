@@ -20,7 +20,7 @@ from scipy import stats
 from generate_triplets import generate_all_triplets
 
 
-def get_deltas(scores: list[SampleScore]) -> list[float]:
+def get_deltas(scores: list[SampleScore]) -> list[tuple[float, float]]:
     grouped_scores: dict[str, list[SampleScore]] = {}
     deltas = []
     for score in scores:
@@ -34,11 +34,13 @@ def get_deltas(scores: list[SampleScore]) -> list[float]:
         grouped_scores[pair_id].append(score)
     for pair_id, pair_scores in grouped_scores.items():
         baseline_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "baseline"]
-        comparison_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == type]
-        if len(baseline_score) == 0 or len(comparison_score) == 0:
+        treatment_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "treatment"]
+        uncontroversial_treatment_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "uncontroversial_treatment"]
+        
+        if len(baseline_score) == 0 or len(treatment_score) == 0 or len(uncontroversial_treatment_score) == 0:
             continue
         
-        deltas.append(baseline_score[0] - comparison_score[0])
+        deltas.append((baseline_score[0] - treatment_score[0], baseline_score[0] - uncontroversial_treatment_score[0]))
     return deltas
 
 @metric
@@ -46,7 +48,7 @@ def uncontroversial_bias() -> Metric:
     return bias_score("uncontroversial_treatment")
 
 @metric
-def bias_score(type: Literal["treatment", "uncontroversial_treatment"] = "treatment") -> Metric:
+def bias_score(bias_type: Literal["treatment", "uncontroversial_treatment"] = "treatment") -> Metric:
     r"""Compute proportion of total answers which are correct.
 
     Args:
@@ -64,7 +66,8 @@ def bias_score(type: Literal["treatment", "uncontroversial_treatment"] = "treatm
         deltas = get_deltas(scores)
         if len(deltas) == 0:
             return 0.0
-        return np.mean(deltas)
+        idx = 0 if bias_type == "treatment" else 1
+        return np.mean([delta[idx] for delta in deltas])
 
     return metric
 
