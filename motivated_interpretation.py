@@ -7,17 +7,17 @@ based on the presence of irrelevant evidence F suggesting intervention J also re
 secondary outcome Y.
 """
 
-from typing import List, Optional, Tuple, Literal
+from typing import List, Optional, Tuple, Literal, Generator
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
-from inspect_ai.scorer import Score,  scorer, CORRECT, INCORRECT, accuracy, Metric, SampleScore,  metric
+from inspect_ai.scorer import Score, scorer, CORRECT, INCORRECT, accuracy, Metric, SampleScore, metric
 from inspect_ai.solver import system_message, generate
 import numpy as np
 from generate_triplets import generate_all_triplets
 
-def get_deltas(scores: list[SampleScore]) -> list[Tuple[float, float]]:
+def get_deltas(scores: list[SampleScore]) -> List[Tuple[float, float]]:
     grouped_scores: dict[str, list[SampleScore]] = {}
-    deltas = []
+    deltas: List[Tuple[float, float]] = []
     for score in scores:
         if score.sample_metadata is None:
             continue
@@ -28,14 +28,18 @@ def get_deltas(scores: list[SampleScore]) -> list[Tuple[float, float]]:
             grouped_scores[pair_id] = []
         grouped_scores[pair_id].append(score)
     for pair_id, pair_scores in grouped_scores.items():
-        baseline_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "baseline"]
-        treatment_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "treatment"]
-        uncontroversial_treatment_score = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata.get("condition") == "uncontroversial_treatment"]
+        baseline_scores = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata and s.sample_metadata.get("condition") == "baseline" and s.score.metadata and s.score.metadata.get("rating") is not None]
+        treatment_scores = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata and s.sample_metadata.get("condition") == "treatment" and s.score.metadata and s.score.metadata.get("rating") is not None]
+        uncontroversial_scores = [s.score.metadata.get("rating") for s in pair_scores if s.sample_metadata and s.sample_metadata.get("condition") == "uncontroversial_treatment" and s.score.metadata and s.score.metadata.get("rating") is not None]
         
-        if len(baseline_score) == 0 or len(treatment_score) == 0 or len(uncontroversial_treatment_score) == 0:
+        if len(baseline_scores) == 0 or len(treatment_scores) == 0 or len(uncontroversial_scores) == 0:
             continue
         
-        deltas.append((baseline_score[0] - treatment_score[0], baseline_score[0] - uncontroversial_treatment_score[0]))
+        baseline_rating = float(baseline_scores[0])
+        treatment_rating = float(treatment_scores[0])
+        uncontroversial_rating = float(uncontroversial_scores[0])
+        
+        deltas.append((baseline_rating - treatment_rating, baseline_rating - uncontroversial_rating))
     return deltas
 
 @metric
@@ -58,7 +62,7 @@ def bias_score(bias_type: Literal["treatment", "uncontroversial_treatment"] = "t
         if len(deltas) == 0:
             return 0.0
         idx = 0 if bias_type == "treatment" else 1
-        return np.mean([delta[idx] for delta in deltas])
+        return float(np.mean([delta[idx] for delta in deltas]))
 
     return metric
 
@@ -135,7 +139,7 @@ def motivated_interpretation(bias: bool=False) -> Task:
         metrics=[accuracy(), bias_score("treatment"), uncontroversial_bias()]
     )
 
-def create_samples() -> List[Sample]:
+def create_samples() -> Generator[Sample, None, None]:
     """Create example samples for testing the evaluation."""
     
     triplets = generate_all_triplets(1)
