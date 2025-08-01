@@ -29,11 +29,11 @@ def generate_evidence_combos(num_combos: int = 100) -> List[Dict[str, List[float
             log_n = random.uniform(math.log10(10), math.log10(1000))
             n_values.append(int(10**log_n))
 
-        # Log-uniform distribution for p_value from 0.005 to 0.05
+        # Uniform distribution for p_value from 0.005 to 0.05
         p_values = []
         for _ in range(3):
-            log_p = random.uniform(math.log10(0.005), math.log10(0.05))
-            p_values.append(format_to_2sf(10**log_p))
+            p = random.uniform(0.005, 0.05)
+            p_values.append(format_to_2sf(p))
 
         # Log-uniform distribution for effect_size from 0.1 to 10
         effect_sizes = []
