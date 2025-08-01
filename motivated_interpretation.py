@@ -147,11 +147,13 @@ def create_motivated_interpretation_task(
         # Create example samples for testing
         dataset = create_example_samples()
     
+    def uncontroversial_bias():
+        return bias_score("uncontroversial_treatment")
     return Task(
         dataset=dataset,
         solver=motivated_interpretation_solver(),
         scorer=match(),
-        metrics=[accuracy(), bias_score("treatment"), bias_score("uncontroversial_treatment")]
+        metrics=[accuracy(), bias_score("treatment"), uncontroversial_bias()]
     )
 
 def create_example_samples() -> List[Sample]:
