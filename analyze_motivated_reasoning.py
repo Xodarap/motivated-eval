@@ -52,7 +52,9 @@ def get_deltas(scores_df: pd.DataFrame) -> List[Tuple[float, float]]:
         The first element of the tuple is the delta between the baseline and treatment scores.
         The second element of the tuple is the delta between the baseline and uncontroversial treatment scores.
     """
-   # Pivot and filter complete pairs
+   
+    scores_df['metadata_pair_id'] = scores_df['metadata_pair_id'].astype(str) + "_" + scores_df['epoch'].astype(str)
+    # Pivot and filter complete pairs
     pivot_df = scores_df.pivot_table(
         index='metadata_pair_id', 
         columns='metadata_condition', 
