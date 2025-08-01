@@ -16,6 +16,15 @@ import numpy as np
 from generate_triplets import generate_all_triplets
 
 def get_deltas(scores: list[SampleScore]) -> List[Tuple[float, float]]:
+    """
+    Get the deltas between the baseline and treatment scores.
+    Args:
+        scores: List of SampleScore objects
+    Returns:
+        List of tuples containing the deltas between the baseline and treatment scores.
+        The first element of the tuple is the delta between the baseline and treatment scores.
+        The second element of the tuple is the delta between the baseline and uncontroversial treatment scores.
+    """
     grouped_scores: dict[str, list[SampleScore]] = {}
     deltas: List[Tuple[float, float]] = []
     for score in scores:
@@ -48,13 +57,13 @@ def uncontroversial_bias() -> Metric:
 
 @metric
 def bias_score(bias_type: Literal["treatment", "uncontroversial_treatment"] = "treatment") -> Metric:
-    r"""Compute proportion of total answers which are correct.
+    r"""Compute the mean delta between the baseline and the treatment or uncontroversial treatment.
 
     Args:
        bias_type: "treatment" or "uncontroversial_treatment" depending on which condition to compare to the baseline
 
     Returns:
-       Accuracy metric
+       Mean delta between the baseline and the treatment or uncontroversial treatment.
     """
 
     def metric(scores: list[SampleScore]) -> float:
