@@ -6,6 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "inspect-ai>=0.3.117",
     "numpy>=2.0.0",
+    "openai>=1.98.0",
     "pytest>=8.0.0",
     "scipy>=1.14.0",
 ]
