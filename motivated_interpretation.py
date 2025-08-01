@@ -95,7 +95,7 @@ def motivated_interpretation_scorer():
             )
         
         return Score(
-            value=str(rating),
+            value=str(rating), # Convert to string since that's required for serde??
             explanation=f"Successfully extracted rating: {rating}",
             metadata={
                 "rating": rating,
