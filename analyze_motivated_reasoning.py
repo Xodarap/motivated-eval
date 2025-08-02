@@ -244,6 +244,7 @@ def display_summary_table(df: pd.DataFrame):
     
     # Round numerical columns for display
     display_df = df.copy()
+    display_df = display_df.drop(columns=["significant_at_05", "interpretation"])
     numerical_cols = ["mean_bias_effect", "mean_noise_effect", "mean_difference", 
                      "t_statistic", "p_value", "cohens_d"]
     
@@ -274,6 +275,23 @@ def display_summary_table(df: pd.DataFrame):
         print(f"  Mean difference: {sig_df['mean_difference'].mean():.3f}")
 
 
+def output_csv(df: pd.DataFrame):
+    """Output CSV data to stdout for importing into Google Sheets."""
+    # Create a clean CSV version with rounded numbers
+    csv_df = df.copy()
+    numerical_cols = ["mean_bias_effect", "mean_noise_effect", "mean_difference", 
+                     "t_statistic", "p_value", "cohens_d", "ci_95_lower", "ci_95_upper"]
+    
+    for col in numerical_cols:
+        if col in csv_df.columns:
+            csv_df[col] = csv_df[col].round(4)
+    
+    print("\n" + "="*100)
+    print("CSV OUTPUT FOR GOOGLE SHEETS")
+    print("="*100)
+    print(csv_df.to_csv(index=False))
+
+
 # Example usage
 if __name__ == "__main__":
     try:
@@ -282,6 +300,9 @@ if __name__ == "__main__":
         
         # Display summary table
         display_summary_table(results_df)
+        
+        # Output CSV for Google Sheets
+        output_csv(results_df)
         
         # Optionally print detailed reports for each model
         print("\n" + "="*100)
