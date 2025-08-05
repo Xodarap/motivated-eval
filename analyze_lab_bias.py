@@ -96,7 +96,7 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
         #     break
     
     if not results_list:
-        return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     
     # Create DataFrame and pivot to table format
     results_df = pd.DataFrame(results_list)
@@ -124,7 +124,70 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
     creator_marginal_row.name = 'Marginal'
     creator_pivot_df = pd.concat([creator_pivot_df, creator_marginal_row.to_frame().T])
     
-    return pivot_df, creator_pivot_df
+    return pivot_df, creator_pivot_df, results_df
+
+def test_diagonal_vs_offdiagonal(results_df: pd.DataFrame):
+    """
+    Test if diagonal elements (same creator_lab and evaluated_lab) differ from off-diagonal elements.
+    """
+    from scipy.stats import ttest_ind
+    
+    # Filter out rows where creator_lab or lab is missing
+    clean_df = results_df.dropna(subset=['creator_lab', 'lab'])
+    
+    if clean_df.empty:
+        print("No valid data for diagonal vs off-diagonal test")
+        return
+    
+    # Separate diagonal and off-diagonal entries
+    diagonal_scores = clean_df[clean_df['creator_lab'] == clean_df['lab']]['mean_score'].values
+    offdiagonal_scores = clean_df[clean_df['creator_lab'] != clean_df['lab']]['mean_score'].values
+    
+    if len(diagonal_scores) == 0:
+        print("No diagonal entries found for statistical test")
+        return
+    
+    if len(offdiagonal_scores) == 0:
+        print("No off-diagonal entries found for statistical test")
+        return
+    
+    # Perform t-test
+    t_stat, p_value = ttest_ind(diagonal_scores, offdiagonal_scores)
+    
+    # Calculate descriptive statistics
+    diagonal_mean = np.mean(diagonal_scores)
+    diagonal_std = np.std(diagonal_scores)
+    offdiagonal_mean = np.mean(offdiagonal_scores)
+    offdiagonal_std = np.std(offdiagonal_scores)
+    
+    # Effect size (Cohen's d)
+    pooled_std = np.sqrt(((len(diagonal_scores) - 1) * diagonal_std**2 + 
+                         (len(offdiagonal_scores) - 1) * offdiagonal_std**2) / 
+                        (len(diagonal_scores) + len(offdiagonal_scores) - 2))
+    cohens_d = (diagonal_mean - offdiagonal_mean) / pooled_std if pooled_std > 0 else 0
+    
+    print("\nDiagonal vs Off-Diagonal Statistical Test")
+    print("=" * 60)
+    print(f"Diagonal entries (same creator & evaluated lab):")
+    print(f"  Count: {len(diagonal_scores)}")
+    print(f"  Mean: {diagonal_mean:.3f}")
+    print(f"  Std: {diagonal_std:.3f}")
+    print(f"\nOff-diagonal entries (different creator & evaluated lab):")
+    print(f"  Count: {len(offdiagonal_scores)}")
+    print(f"  Mean: {offdiagonal_mean:.3f}")
+    print(f"  Std: {offdiagonal_std:.3f}")
+    print(f"\nT-test results:")
+    print(f"  t-statistic: {t_stat:.3f}")
+    print(f"  p-value: {p_value:.4f}")
+    print(f"  Cohen's d: {cohens_d:.3f}")
+    
+    if p_value < 0.05:
+        direction = "higher" if diagonal_mean > offdiagonal_mean else "lower"
+        print(f"\n**Significant difference found (p < 0.05)**")
+        print(f"Models show {direction} bias when evaluating their own creator lab vs other labs")
+    else:
+        print(f"\nNo significant difference found (p >= 0.05)")
+        print(f"No evidence of systematic bias toward own creator lab")
 
 def print_results_table(df: pd.DataFrame):
     """Print results in a nicely formatted table"""
@@ -140,8 +203,11 @@ def print_results_table(df: pd.DataFrame):
     print("Marginal row shows average bias per model across all labs")
 
 if __name__ == "__main__":
-    model_results, creator_results = analyze_all_transcripts()
+    model_results, creator_results, raw_results = analyze_all_transcripts()
     print("\nModel vs Lab Analysis:")
     print_results_table(model_results)
     print("\nCreator Lab vs Lab Analysis:")
     print_results_table(creator_results)
+    
+    # Statistical test for diagonal vs off-diagonal bias
+    test_diagonal_vs_offdiagonal(raw_results)
