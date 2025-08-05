@@ -13,7 +13,7 @@ if not os.path.exists(log_dir):
 MODELS = [
             # Anthropic
             "anthropic/claude-3-5-sonnet-20241022",
-            "anthropic/claude-opus-4-20250514",
+            # "anthropic/claude-opus-4-20250514",
             "anthropic/claude-sonnet-4-20250514",
             "anthropic/claude-3-7-sonnet-20250219",
             "anthropic/claude-3-5-haiku-20241022",
@@ -22,8 +22,8 @@ MODELS = [
             "openai/gpt-4.1-2025-04-14",
             "openai/gpt-4o-2024-08-06",
             "openai/o4-mini-2025-04-16",
-            "openai/o1-2024-12-17",
-            "openai/o3-2025-04-16",
+            # "openai/o1-2024-12-17",
+            # "openai/o3-2025-04-16",
             
             # Gemini
             "google/gemini-1.5-flash",

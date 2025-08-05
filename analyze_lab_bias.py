@@ -67,11 +67,13 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
             lab_scores = samples.groupby('lab')['score_motivated_interpretation_scorer'].mean()
             
             model_name = evals.loc[0,'model'].split('/')[1]
+            creator_lab = evals.loc[0,'model'].split('/')[0]
             
             # Add to results with model name
             for lab, score in lab_scores.items():
                 results_list.append({
                     'model': model_name,
+                    'creator_lab': creator_lab,
                     'lab': lab,
                     'mean_score': score
                 })
@@ -88,7 +90,7 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
     
     # Create DataFrame and pivot to table format
     results_df = pd.DataFrame(results_list)
-    pivot_df = results_df.pivot(index='model', columns='lab', values='mean_score')
+    pivot_df = results_df.pivot_table(index='model', columns='lab', values='mean_score', aggfunc='mean')
     
     # Add marginal means (row and column averages)
     pivot_df['Marginal'] = pivot_df.mean(axis=1)  # Row means
