@@ -2,7 +2,7 @@ import re
 import numpy as np
 from scipy import stats
 from inspect_ai.analysis.beta import (
-    SampleMessages, SampleSummary, samples_df
+    SampleMessages, SampleSummary, samples_df, evals_df
 )
 import pandas as pd
 from typing import List, Tuple
@@ -24,7 +24,7 @@ def extract_lab_name_regex(text):
     else:
         return 'None'
 
-def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd.DataFrame:
+def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-2025-08-04") -> pd.DataFrame:
     """
     Analyze all transcript files in the given directory and return a summary DataFrame.
     
@@ -45,10 +45,9 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd
         raise FileNotFoundError(f"No .eval files found in {transcripts_dir}")
     
     results_list = []
-    
+    count = 0
     for file_path in sorted(transcript_files):
         file_name = os.path.basename(file_path)
-        model_name = file_name.replace('.eval', '')
         print(f"Analyzing {file_name}...")
         
         try:
@@ -56,7 +55,7 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd
                 logs=file_path,
                 columns=SampleSummary + SampleMessages
             )
-            
+            evals = evals_df(logs=file_path)
             if samples.empty:
                 print(f"Warning: No samples found in {file_name}")
                 continue
@@ -66,6 +65,8 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd
             
             # Group by lab and get mean scores
             lab_scores = samples.groupby('lab')['score_motivated_interpretation_scorer'].mean()
+            
+            model_name = evals.loc[0,'model'].split('/')[1]
             
             # Add to results with model name
             for lab, score in lab_scores.items():
@@ -78,13 +79,16 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd
         except Exception as e:
             print(f"Error processing {file_name}: {e}")
             continue
+        count = count + 1
+        # if count > 3:
+        #     break
     
     if not results_list:
         return pd.DataFrame()
     
     # Create DataFrame and pivot to table format
     results_df = pd.DataFrame(results_list)
-    pivot_df = results_df.pivot(index='lab', columns='model', values='mean_score')
+    pivot_df = results_df.pivot(index='model', columns='lab', values='mean_score')
     
     # Add marginal means (row and column averages)
     pivot_df['Marginal'] = pivot_df.mean(axis=1)  # Row means
