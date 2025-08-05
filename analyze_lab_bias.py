@@ -67,7 +67,17 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
             lab_scores = samples.groupby('lab')['score_motivated_interpretation_scorer'].mean()
             
             model_name = evals.loc[0,'model'].split('/')[1]
-            creator_lab = evals.loc[0,'model'].split('/')[0]
+            creator_lab_raw = evals.loc[0,'model'].split('/')[0]
+            
+            # Map creator lab names to match the lab names in exceptions
+            creator_lab_mapping = {
+                'anthropic': 'Anthropic',
+                'google': 'Google', 
+                'openai': 'OpenAI',
+                'grok': 'xAI',
+                'deepseek': 'DeepSeek'
+            }
+            creator_lab = creator_lab_mapping.get(creator_lab_raw.lower(), creator_lab_raw)
             
             # Add to results with model name
             for lab, score in lab_scores.items():
@@ -86,11 +96,17 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
         #     break
     
     if not results_list:
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
     
     # Create DataFrame and pivot to table format
     results_df = pd.DataFrame(results_list)
+    
+    # Get all unique labs and sort them for consistent ordering
+    all_labs = sorted(results_df['lab'].unique())
+    
+    # Pivot table by model vs lab
     pivot_df = results_df.pivot_table(index='model', columns='lab', values='mean_score', aggfunc='mean')
+    pivot_df = pivot_df.reindex(columns=all_labs)
     
     # Add marginal means (row and column averages)
     pivot_df['Marginal'] = pivot_df.mean(axis=1)  # Row means
@@ -98,7 +114,17 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias/run-202
     marginal_row.name = 'Marginal'
     pivot_df = pd.concat([pivot_df, marginal_row.to_frame().T])
     
-    return pivot_df
+    # Pivot table by creator_lab vs lab
+    creator_pivot_df = results_df.pivot_table(index='creator_lab', columns='lab', values='mean_score', aggfunc='mean')
+    creator_pivot_df = creator_pivot_df.reindex(columns=all_labs, index=all_labs)
+    
+    # Add marginal means for creator pivot
+    creator_pivot_df['Marginal'] = creator_pivot_df.mean(axis=1)  # Row means
+    creator_marginal_row = creator_pivot_df.mean(axis=0)  # Column means
+    creator_marginal_row.name = 'Marginal'
+    creator_pivot_df = pd.concat([creator_pivot_df, creator_marginal_row.to_frame().T])
+    
+    return pivot_df, creator_pivot_df
 
 def print_results_table(df: pd.DataFrame):
     """Print results in a nicely formatted table"""
@@ -114,5 +140,8 @@ def print_results_table(df: pd.DataFrame):
     print("Marginal row shows average bias per model across all labs")
 
 if __name__ == "__main__":
-    results = analyze_all_transcripts()
-    print_results_table(results)
+    model_results, creator_results = analyze_all_transcripts()
+    print("\nModel vs Lab Analysis:")
+    print_results_table(model_results)
+    print("\nCreator Lab vs Lab Analysis:")
+    print_results_table(creator_results)
