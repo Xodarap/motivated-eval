@@ -24,7 +24,7 @@ def extract_lab_name_regex(text):
     else:
         return 'None'
 
-def analyze_all_transcripts(transcripts_dir: str = "transcripts") -> pd.DataFrame:
+def analyze_all_transcripts(transcripts_dir: str = "transcripts/lab_bias") -> pd.DataFrame:
     """
     Analyze all transcript files in the given directory and return a summary DataFrame.
     
@@ -51,14 +51,62 @@ def analyze_all_transcripts(transcripts_dir: str = "transcripts") -> pd.DataFram
         model_name = file_name.replace('.eval', '')
         print(f"Analyzing {file_name}...")
         
-        samples = samples_df(
-            logs="transcripts/lab_bias/gpt-4.1-mini.eval",
-            columns=SampleSummary + SampleMessages
-        )
-        samples['score_motivated_interpretation_scorer'] = samples['score_motivated_interpretation_scorer'].astype(float)
-        samples['lab'] = samples['metadata_exception'].map(extract_lab_name_regex)
-        
-        return samples.groupby('lab')['score_motivated_interpretation_scorer'].mean()
+        try:
+            samples = samples_df(
+                logs=file_path,
+                columns=SampleSummary + SampleMessages
+            )
+            
+            if samples.empty:
+                print(f"Warning: No samples found in {file_name}")
+                continue
+                
+            samples['score_motivated_interpretation_scorer'] = samples['score_motivated_interpretation_scorer'].astype(float)
+            samples['lab'] = samples['metadata_exception'].map(extract_lab_name_regex)
+            
+            # Group by lab and get mean scores
+            lab_scores = samples.groupby('lab')['score_motivated_interpretation_scorer'].mean()
+            
+            # Add to results with model name
+            for lab, score in lab_scores.items():
+                results_list.append({
+                    'model': model_name,
+                    'lab': lab,
+                    'mean_score': score
+                })
+                
+        except Exception as e:
+            print(f"Error processing {file_name}: {e}")
+            continue
+    
+    if not results_list:
+        return pd.DataFrame()
+    
+    # Create DataFrame and pivot to table format
+    results_df = pd.DataFrame(results_list)
+    pivot_df = results_df.pivot(index='lab', columns='model', values='mean_score')
+    
+    # Add marginal means (row and column averages)
+    pivot_df['Marginal'] = pivot_df.mean(axis=1)  # Row means
+    marginal_row = pivot_df.mean(axis=0)  # Column means
+    marginal_row.name = 'Marginal'
+    pivot_df = pd.concat([pivot_df, marginal_row.to_frame().T])
+    
+    return pivot_df
+
+def print_results_table(df: pd.DataFrame):
+    """Print results in a nicely formatted table"""
+    if df.empty:
+        print("No results to display")
+        return
+    
+    print("\nLab Bias Analysis Results")
+    print("=" * 70)
+    print(df.round(3).to_string())
+    print("\nNote: Higher scores indicate stronger bias")
+    print("Marginal column shows average bias per lab across all models")
+    print("Marginal row shows average bias per model across all labs")
 
 if __name__ == "__main__":
-    print(analyze_all_transcripts())
+    results = analyze_all_transcripts()
+    print_results_table(results)
