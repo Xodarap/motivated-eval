@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple, Literal, Generator
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import Score, scorer, CORRECT, INCORRECT, accuracy, Metric, SampleScore, metric
-from inspect_ai.solver import system_message, generate
+from inspect_ai.solver import system_message, chain_of_thought
 from inspect_ai.model import ChatMessageUser, ChatMessageAssistant
 from jinja2 import Template
 import numpy as np
@@ -145,7 +145,7 @@ def lab_bias(bias: bool=False) -> Task:
         dataset=list(create_samples(bias)), 
         solver=[
             system_message(prompt), 
-            generate()
+            chain_of_thought()
         ],
         scorer=motivated_interpretation_scorer()
     )
